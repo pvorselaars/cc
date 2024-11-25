@@ -9,7 +9,35 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		return 1;
 
-	char *filename = argv[1];
+	char lex     = 0;
+	char parse   = 0;
+	char codegen = 0;
+	char *filename = NULL;
+
+	for (int a = 1; a < argc; a++) {
+
+		if (strcmp(argv[a], "--lex") == 0) {
+			lex = 1;
+			continue;
+		}
+
+		if (strcmp(argv[a], "--parse") == 0) {
+			parse = 1;
+			continue;
+		}
+
+		if (strcmp(argv[a], "--codegen") == 0) {
+			codegen = 1;
+			continue;
+		}
+
+		filename = argv[a];
+	}
+
+	if (!filename) {
+		fprintf(stderr, "Usage: %s [options] <file>\n", argv[0]);
+		return 1;
+	}
 
 	regex_t regex;
 	if (regcomp(&regex, ".*\\.c$", REG_EXTENDED) != 0) {
@@ -34,18 +62,31 @@ int main(int argc, char *argv[])
 	out[strlen(out)-1] = 'i';
 
 	sprintf(cmd, fmt, filename, out);
-	system(cmd);
+	if (system(cmd) != 0)
+		return 1;
 
 	// Compile
 	
 	remove(out);
 
+	if (lex) {
+		return 0;
+	}
+
+	if (parse) {
+		return 0;
+	}
+
+	if (codegen) {
+		return 0;
+	}
 	// Assemble and link
 	
 	out[strlen(out)-1] = 's';
 	fmt = "cc %s";
 	sprintf(cmd, fmt, out);
-	system(cmd);
+	if (system(cmd) != 0)
+		return 1;
 
 	free(cmd);
 	free(out);
