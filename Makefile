@@ -1,12 +1,15 @@
-SOURCES	  = cc.c
-TOOLS     = $(basename $(SOURCES))
+OBJECTS = cc.o lexer.o
+CFLAGS  = -Wall -Wextra -g
 
-.PHONY: clean
+TARGET  = cc
 
-all: $(TOOLS)
+${TARGET}: $(OBJECTS)
+	$(CC) $^ -o $@
 
-%: %.c
-	$(CC) -Wall -g $^ -o $@
+%: %.c %.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm $(TOOLS)
+	rm -f $(OBJECTS) $(TARGET)
+
+.PHONY: clean
