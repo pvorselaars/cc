@@ -9,5 +9,6 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "emit.h"
 
 #endif

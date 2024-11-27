@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
 
 	char *fmt = "cc -E -P %s -o %s";
 	char *cmd = malloc(sizeof(char) * (strlen(fmt) + 2 * strlen(filename) - 4));
-	char *out = malloc(sizeof(char) * strlen(filename));
+	char *out = strdup(filename);
+	char *bin = strdup(filename);
 
-	strcpy(out, filename);
 	out[strlen(out) - 1] = 'i';
 
 	sprintf(cmd, fmt, filename, out);
@@ -72,19 +72,26 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	parse(list);
+	c_ast_node_t *c_ast = parse(list);
 	free_tokens(list);
 	if (parse_flag)
 		return 0;
 
+	x64_ast_node_t *x64_ast = parse_x64(c_ast);
+	free_c_ast(c_ast);
 	if (codegen_flag)
 		return 0;
 
+	out[strlen(out) - 1] = 's';
+	FILE *s = fopen(out, "w");
+	emit(s, x64_ast);
+	fclose(s);
+
 	// Assemble and link
 
-	out[strlen(out) - 1] = 's';
-	fmt = "cc %s";
-	sprintf(cmd, fmt, out);
+	bin[strlen(bin) - 2] = 0;
+	fmt = "cc %s -o %s";
+	sprintf(cmd, fmt, out, bin);
 	if (system(cmd) != 0)
 		return 1;
 
