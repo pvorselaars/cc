@@ -1,4 +1,4 @@
-OBJECTS = cc.o lexer.o
+OBJECTS = cc.o lexer.o parser.o
 CFLAGS  = -Wall -Wextra -g
 
 TARGET  = cc

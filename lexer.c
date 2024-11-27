@@ -1,12 +1,12 @@
 #include "lexer.h"
 
-static char* keywords[] = {
+static char *keywords[] = {
 	"int",
 	"void",
 	"return",
 };
 
-static int num_keywords = sizeof(keywords)/sizeof(char*);
+static int num_keywords = sizeof(keywords) / sizeof(char *);
 
 bool is_constant(const char *value)
 {
@@ -63,14 +63,15 @@ token_t *get_token(char **input)
 			position++;
 		}
 
-		token->value = malloc(sizeof(char) * c);
+		token->value = malloc(sizeof(char) * c + 1);
 		strncpy(token->value, str, c);
-		token->value[c] = '\0';
+		token->value[c] = 0;
 
-		if (is_constant(token->value)) {
-			token->type = CONSTANT;
+		if (!is_constant(token->value)) {
+			fprintf(stderr, "Invalid token \"%s\"\n", token->value);
+			token->type = TOKEN_INVALID;
 		} else {
-			token->type = INVALID;
+			token->type = TOKEN_CONSTANT;
 		}
 
 	} else if (isalpha(*position)) {
@@ -84,36 +85,80 @@ token_t *get_token(char **input)
 
 		token->value = malloc(sizeof(char) * c + 1);
 		strncpy(token->value, str, c);
-		token->value[c] = '\0';
+		token->value[c] = 0;
 
 		if (is_keyword(token->value)) {
-			token->type = KEYWORD;
+			token->type = TOKEN_KEYWORD;
 		} else {
-			token->type = IDENTIFIER;
+			token->type = TOKEN_IDENTIFIER;
 		}
 
 	} else if (*position == '(') {
-		token->type = L_PARENTHESES;
+		token->type = TOKEN_L_PARENTHESES;
 		position++;
 	} else if (*position == ')') {
-		token->type = R_PARENTHESES;
+		token->type = TOKEN_R_PARENTHESES;
 		position++;
 	} else if (*position == '{') {
-		token->type = L_BRACE;
+		token->type = TOKEN_L_BRACE;
 		position++;
 	} else if (*position == '}') {
-		token->type = R_BRACE;
+		token->type = TOKEN_R_BRACE;
 		position++;
 	} else if (*position == ';') {
-		token->type = SEMICOLON;
+		token->type = TOKEN_SEMICOLON;
 		position++;
 	} else {
-		token->type = INVALID;
+		token->type = TOKEN_INVALID;
+		fprintf(stderr, "Invalid token \"%s\"\n", token->value);
 		position++;
 	}
 
 	*input = position;
 	return token;
+}
+
+char *token_string(token_type type)
+{
+	switch (type) {
+	case TOKEN_CONSTANT:
+		return "constant";
+		break;
+
+	case TOKEN_IDENTIFIER:
+		return "identifier";
+		break;
+
+	case TOKEN_KEYWORD:
+		return "keyword";
+		break;
+
+	case TOKEN_L_PARENTHESES:
+		return "(";
+		break;
+
+	case TOKEN_R_PARENTHESES:
+		return ")";
+		break;
+
+	case TOKEN_L_BRACE:
+		return "{";
+		break;
+
+	case TOKEN_R_BRACE:
+		return "}";
+		break;
+
+	case TOKEN_SEMICOLON:
+		return ";";
+		break;
+
+	case TOKEN_INVALID:
+		return "invalid";
+		break;
+	}
+
+	return "invalid";
 }
 
 void free_tokens(token_t * tokens)
@@ -127,6 +172,7 @@ void free_tokens(token_t * tokens)
 		if (temp->value != NULL) {
 			free(temp->value);
 		}
+
 		free(temp);
 	}
 }
@@ -136,7 +182,7 @@ bool invalid_token(token_t * tokens)
 	if (tokens == NULL)
 		return false;
 
-	while (tokens->type != INVALID) {
+	while (tokens->type != TOKEN_INVALID) {
 
 		if (tokens->next != NULL) {
 			tokens = tokens->next;
@@ -144,8 +190,19 @@ bool invalid_token(token_t * tokens)
 			return false;
 		}
 	}
-	
+
 	return true;
+}
+
+token_t *take_token(token_t ** tokens)
+{
+	token_t *temp;
+	if (*tokens != NULL) {
+		temp = *tokens;
+		*tokens = (*tokens)->next;
+	}
+
+	return temp;
 }
 
 token_t *lex(FILE * stream)
@@ -172,11 +229,11 @@ token_t *lex(FILE * stream)
 				prev->next = current;
 			}
 
-			if (current->type == INVALID) {
-				fprintf(stderr, "Invalid token %s\n", current->value);
+			if (current->type != TOKEN_INVALID && current->value != NULL) {
+				printf("%s\n", current->value);
+			} else if (current->type != TOKEN_INVALID && current->value == NULL) {
+				printf("%s\n", token_string(current->type));
 			}
-
-			printf("%d: %s\n", current->type, current->value);
 
 			prev = current;
 		}

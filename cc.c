@@ -35,11 +35,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (filename[strlen(filename)-1] != 'c' && filename[strlen(filename)-2] != '.') {
+	if (filename[strlen(filename) - 1] != 'c' && filename[strlen(filename) - 2] != '.') {
 		fprintf(stderr, "%s is not a .c file\n", filename);
 		return 1;
 	}
-
 	// Preprocess 
 
 	char *fmt = "cc -E -P %s -o %s";
@@ -56,24 +55,25 @@ int main(int argc, char *argv[])
 	// Compile
 
 	// Lex preprocessed file
-	
+
 	FILE *i = fopen(out, "r");
 
 	token_t *list = lex(i);
+	fclose(i);
+	remove(out);
+
 	if (invalid_token(list)) {
 		free_tokens(list);
-		fclose(i);
-		remove(out);
 		return 1;
-	} else {
-		free_tokens(list);
-		fclose(i);
-		remove(out);
 	}
 
-	if (lex_flag)
+	if (lex_flag) {
+		free_tokens(list);
 		return 0;
+	}
 
+	parse(list);
+	free_tokens(list);
 	if (parse_flag)
 		return 0;
 

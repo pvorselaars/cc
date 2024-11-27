@@ -8,5 +8,6 @@
 #include <unistd.h>
 
 #include "lexer.h"
+#include "parser.h"
 
 #endif
