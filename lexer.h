@@ -22,17 +22,14 @@ typedef enum {
 	END
 } token_type;
 
-typedef struct {
+typedef struct token_t {
 	token_type type;
-	char value[32];
+	char *value;
+	struct token_t *next;
 } token_t;
 
-static char* keywords[] = {
-	"int",
-	"void",
-	"return",
-};
-
-int lex(const char*);
+void free_tokens(token_t*);
+bool invalid_token(token_t*);
+token_t *lex(FILE*);
 
 #endif

@@ -1,45 +1,47 @@
 #include "lexer.h"
 
+static char* keywords[] = {
+	"int",
+	"void",
+	"return",
+};
+
 static int num_keywords = sizeof(keywords)/sizeof(char*);
 
-int is_identifier(char *buffer)
+bool is_constant(const char *value)
 {
-	while (*buffer != 0) {
-		if (!isalpha(*buffer))
-			return 0;
+	while (*value != 0) {
+		if (!isdigit(*value))
+			return false;
 
-		buffer++;
+		value++;
 	}
 
-	return 1;
-}
-
-int is_constant(char *buffer)
-{
-	while (*buffer != 0) {
-		if (!isdigit(*buffer))
-			return 0;
-
-		buffer++;
-	}
-
-	return 1;
+	return true;
 }
 
 bool is_keyword(const char *value)
 {
 
 	for (int i = 0; i < num_keywords; i++) {
-		if (strcmp(keywords[i], value))
+		if (strcmp(keywords[i], value) == 0)
 			return true;
 	}
 
 	return false;
 }
 
-token_t get_token(char **input)
+token_t *get_token(char **input)
 {
-	token_t token;
+	token_t *token = malloc(sizeof(token_t));
+
+	if (!token) {
+		fprintf(stderr, "Unable to allocate token\n");
+		return NULL;
+	}
+
+	token->value = NULL;
+	token->next = NULL;
 
 	char *position = *input;
 
@@ -47,68 +49,66 @@ token_t get_token(char **input)
 		position++;
 	}
 
-	while (*position == '\n') {
-		position++;
-	}
-
-	int i = 0;
 	if (*position == 0) {
 
-		token.type = END;
-		token.value[i] = 0;
+		free(token);
+		return NULL;
 
 	} else if (isdigit(*position)) {
 
-
-		while (isdigit(*position)) {
-			token.value[i++] = *position++;
+		int c = 0;
+		char *str = position;
+		while (*position != 0 && !isspace(*position) && *(position) != ';') {
+			c++;
+			position++;
 		}
 
-		if (isalpha(*position)) {
-			token.type = INVALID;
+		token->value = malloc(sizeof(char) * c);
+		strncpy(token->value, str, c);
+		token->value[c] = '\0';
+
+		if (is_constant(token->value)) {
+			token->type = CONSTANT;
 		} else {
-			token.type = CONSTANT;
+			token->type = INVALID;
 		}
-
-		token.value[i] = 0;
 
 	} else if (isalpha(*position)) {
 
-		while (isalpha(*position)) {
-			token.value[i++] = *position++;
+		int c = 0;
+		char *str = position;
+		while (isalnum(*position)) {
+			c++;
+			position++;
 		}
 
-		if (is_keyword(token.value)) {
-			token.type = KEYWORD;
+		token->value = malloc(sizeof(char) * c + 1);
+		strncpy(token->value, str, c);
+		token->value[c] = '\0';
+
+		if (is_keyword(token->value)) {
+			token->type = KEYWORD;
 		} else {
-			token.type = INVALID;
+			token->type = IDENTIFIER;
 		}
-
-		token.value[i] = 0;
 
 	} else if (*position == '(') {
-		token.type = L_PARENTHESES;
-		token.value[i] = 0;
+		token->type = L_PARENTHESES;
 		position++;
 	} else if (*position == ')') {
-		token.type = R_PARENTHESES;
-		token.value[i] = 0;
+		token->type = R_PARENTHESES;
 		position++;
 	} else if (*position == '{') {
-		token.type = L_BRACE;
-		token.value[i] = 0;
+		token->type = L_BRACE;
 		position++;
 	} else if (*position == '}') {
-		token.type = R_BRACE;
-		token.value[i] = 0;
+		token->type = R_BRACE;
 		position++;
 	} else if (*position == ';') {
-		token.type = SEMICOLON;
-		token.value[i] = 0;
+		token->type = SEMICOLON;
 		position++;
 	} else {
-		token.type = INVALID;
-		token.value[i] = 0;
+		token->type = INVALID;
 		position++;
 	}
 
@@ -116,43 +116,74 @@ token_t get_token(char **input)
 	return token;
 }
 
-int lex(const char *filename)
+void free_tokens(token_t * tokens)
 {
-	FILE *src = fopen(filename, "r");
 
-	if (!src) {
-		fprintf(stderr, "Unable to open source file %s\n", filename);
-		return 1;
+	token_t *temp;
+	while (tokens != NULL) {
+		temp = tokens;
+		tokens = tokens->next;
+
+		if (temp->value != NULL) {
+			free(temp->value);
+		}
+		free(temp);
 	}
+}
 
-	char *buf = malloc(sizeof(char)*LEX_BUFFER_SIZE+1);
-	if (!buf) {
-		fprintf(stderr, "Unable to allocate input buffer\n");
-		return 1;
+bool invalid_token(token_t * tokens)
+{
+	if (tokens == NULL)
+		return false;
+
+	while (tokens->type != INVALID) {
+
+		if (tokens->next != NULL) {
+			tokens = tokens->next;
+		} else {
+			return false;
+		}
 	}
+	
+	return true;
+}
 
+token_t *lex(FILE * stream)
+{
+	char *line;
+	char *buf = NULL;
+	size_t len = 0;
+	ssize_t num_bytes;
 
-	while (fread(buf, sizeof(char), LEX_BUFFER_SIZE, src)) {
+	token_t *list = NULL;
+	token_t *current = list;
+	token_t *prev = list;
 
-		buf[LEX_BUFFER_SIZE] = 0;
+	while ((num_bytes = getline(&buf, &len, stream)) != -1) {
+		line = buf;
 
-		char *line = buf;
+		while ((current = get_token(&line)) != NULL) {
 
-		token_t t = get_token(&line);
+			if (list == NULL) {
+				list = current;
+			}
 
-		while (t.type != END) {
+			if (prev != NULL) {
+				prev->next = current;
+			}
 
-			printf("%d: %s\n", t.type, t.value);
+			if (current->type == INVALID) {
+				fprintf(stderr, "Invalid token %s\n", current->value);
+			}
 
-			if (t.type == INVALID)
-				return 1;
+			printf("%d: %s\n", current->type, current->value);
 
-			t = get_token(&line);
+			prev = current;
 		}
 
 	}
-	
+
 	free(buf);
 
-	return 0;
+	return list;
 }

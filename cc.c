@@ -56,10 +56,18 @@ int main(int argc, char *argv[])
 	// Compile
 
 	// Lex preprocessed file
-	if (lex(out) != 0) {
+	
+	FILE *i = fopen(out, "r");
+
+	token_t *list = lex(i);
+	if (invalid_token(list)) {
+		free_tokens(list);
+		fclose(i);
 		remove(out);
 		return 1;
 	} else {
+		free_tokens(list);
+		fclose(i);
 		remove(out);
 	}
 
