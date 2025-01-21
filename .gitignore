@@ -3,5 +3,6 @@
 !*.*
 *.o
 *.s
+*.out
 !Makefile
 !LICENSE
