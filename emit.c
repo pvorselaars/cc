@@ -4,7 +4,6 @@ void emit(FILE *stream, x64_ast_node_t *ast)
 {
 	if (ast->type == X64_PROGRAM) {
 		emit(stream, ast->function);
-		fprintf(stream, ".section .note.GNU-stack,\"\",@progbits\n");
 	}
 
 	if (ast->type == X64_FUNCTION) {
